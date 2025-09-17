@@ -57,8 +57,12 @@ pub async fn run_all_migrations(pool: &PgPool) -> Result<()> {
 
     for migration in migrations {
         if !applied_migrations.contains(&migration.id) {
-            info!("📝 Applying migration: {} - {}", migration.id, migration.description);
-            apply_migration(pool, &migration).await
+            info!(
+                "📝 Applying migration: {} - {}",
+                migration.id, migration.description
+            );
+            apply_migration(pool, &migration)
+                .await
                 .with_context(|| format!("Failed to apply migration {}", migration.id))?;
             applied_count += 1;
         } else {
@@ -77,7 +81,9 @@ pub async fn run_all_migrations(pool: &PgPool) -> Result<()> {
 
 /// 📝 Apply a single migration
 async fn apply_migration(pool: &PgPool, migration: &Migration) -> Result<()> {
-    let mut transaction = pool.begin().await
+    let mut transaction = pool
+        .begin()
+        .await
         .context("Failed to start migration transaction")?;
 
     // 🔧 Execute the migration SQL
@@ -88,18 +94,18 @@ async fn apply_migration(pool: &PgPool, migration: &Migration) -> Result<()> {
 
     // 📋 Record that this migration was applied
     let checksum = calculate_checksum(&migration.up_sql);
-    sqlx::query(
-        "INSERT INTO migrations (id, description, checksum) VALUES ($1, $2, $3)"
-    )
-    .bind(&migration.id)
-    .bind(&migration.description)
-    .bind(&checksum)
-    .execute(&mut *transaction)
-    .await
-    .context("Failed to record migration in tracking table")?;
+    sqlx::query("INSERT INTO migrations (id, description, checksum) VALUES ($1, $2, $3)")
+        .bind(&migration.id)
+        .bind(&migration.description)
+        .bind(&checksum)
+        .execute(&mut *transaction)
+        .await
+        .context("Failed to record migration in tracking table")?;
 
     // ✅ Commit the transaction
-    transaction.commit().await
+    transaction
+        .commit()
+        .await
         .context("Failed to commit migration transaction")?;
 
     info!("✅ Migration {} applied successfully!", migration.id);
@@ -123,7 +129,7 @@ async fn get_applied_migrations(pool: &PgPool) -> Result<Vec<String>> {
 
 /// 🔢 Calculate checksum for migration integrity
 fn calculate_checksum(sql: &str) -> String {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(sql.as_bytes());
     format!("{:x}", hasher.finalize())
@@ -170,13 +176,16 @@ pub fn get_all_migrations() -> Vec<Migration> {
                 CREATE INDEX idx_users_github_username ON users(github_username);
                 CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
                 CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TABLE IF EXISTS user_sessions;
                 DROP TABLE IF EXISTS users;
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
-
         // 🏗️ Migration 2: Create enum types
         Migration {
             id: "20240101000002_create_enum_types".to_string(),
@@ -208,14 +217,17 @@ pub fn get_all_migrations() -> Vec<Migration> {
                     'system_update',
                     'warning'
                 );
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TYPE IF EXISTS notification_type;
                 DROP TYPE IF EXISTS user_role;
                 DROP TYPE IF EXISTS feedback_status;
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
-
         // 🏗️ Migration 3: Create projects table
         Migration {
             id: "20240101000003_create_projects_table".to_string(),
@@ -244,12 +256,15 @@ pub fn get_all_migrations() -> Vec<Migration> {
                 CREATE INDEX idx_projects_repository ON projects(repository);
                 CREATE INDEX idx_projects_is_active ON projects(is_active);
                 CREATE INDEX idx_projects_last_activity_at ON projects(last_activity_at);
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TABLE IF EXISTS projects;
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
-
         // 🏗️ Migration 4: Create feedback table
         Migration {
             id: "20240101000004_create_feedback_table".to_string(),
@@ -278,12 +293,15 @@ pub fn get_all_migrations() -> Vec<Migration> {
                 CREATE INDEX idx_feedback_status ON feedback(status);
                 CREATE INDEX idx_feedback_created_at ON feedback(created_at);
                 CREATE INDEX idx_feedback_completed_at ON feedback(completed_at);
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TABLE IF EXISTS feedback;
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
-
         // 🏗️ Migration 5: Create rate limiting and notifications tables
         Migration {
             id: "20240101000005_create_utility_tables".to_string(),
@@ -317,13 +335,16 @@ pub fn get_all_migrations() -> Vec<Migration> {
                 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
                 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
                 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TABLE IF EXISTS notifications;
                 DROP TABLE IF EXISTS rate_limits;
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
-
         // 🏗️ Migration 6: Create webhooks and job queues
         Migration {
             id: "20240101000006_create_webhooks_and_jobs".to_string(),
@@ -362,13 +383,16 @@ pub fn get_all_migrations() -> Vec<Migration> {
                 CREATE INDEX idx_background_jobs_status ON background_jobs(status);
                 CREATE INDEX idx_background_jobs_scheduled_at ON background_jobs(scheduled_at);
                 CREATE INDEX idx_background_jobs_job_type ON background_jobs(job_type);
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TABLE IF EXISTS background_jobs;
                 DROP TABLE IF EXISTS webhooks;
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
-
         // 🏗️ Migration 7: Add triggers for updated_at columns
         Migration {
             id: "20240101000007_add_updated_at_triggers".to_string(),
@@ -398,13 +422,17 @@ pub fn get_all_migrations() -> Vec<Migration> {
                     BEFORE UPDATE ON feedback
                     FOR EACH ROW
                     EXECUTE FUNCTION update_updated_at_column();
-            "#.to_string(),
-            down_sql: Some(r#"
+            "#
+            .to_string(),
+            down_sql: Some(
+                r#"
                 DROP TRIGGER IF EXISTS update_feedback_updated_at ON feedback;
                 DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
                 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
                 DROP FUNCTION IF EXISTS update_updated_at_column();
-            "#.to_string()),
+            "#
+                .to_string(),
+            ),
         },
     ]
 }
@@ -420,7 +448,9 @@ pub async fn rollback_migration(pool: &PgPool, migration_id: &str) -> Result<()>
         .context("Migration not found")?;
 
     if let Some(down_sql) = &migration.down_sql {
-        let mut transaction = pool.begin().await
+        let mut transaction = pool
+            .begin()
+            .await
             .context("Failed to start rollback transaction")?;
 
         // 🔄 Execute the rollback SQL
@@ -437,7 +467,9 @@ pub async fn rollback_migration(pool: &PgPool, migration_id: &str) -> Result<()>
             .context("Failed to remove migration record")?;
 
         // ✅ Commit the transaction
-        transaction.commit().await
+        transaction
+            .commit()
+            .await
             .context("Failed to commit rollback transaction")?;
 
         info!("✅ Migration {} rolled back successfully!", migration_id);
@@ -476,7 +508,7 @@ mod tests {
 
         // Ensure migrations are in order
         for i in 1..migrations.len() {
-            assert!(migrations[i-1].id < migrations[i].id);
+            assert!(migrations[i - 1].id < migrations[i].id);
         }
 
         println!("✅ Migration ordering test passed!");

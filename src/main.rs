@@ -1,3 +1,6 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(dead_code)]
 // 🚢 Welcome to Feedbacker - The AI-Powered Repository Management Service! 🚢
 // Created with love by Aye and Hue - Making GitHub PRs as smooth as butter!
 // This file is the heart of our service - treat it with care, comment it well,
@@ -14,28 +17,24 @@ use axum::{
 use std::net::SocketAddr;
 use tokio::signal;
 use tower::ServiceBuilder;
-use tower_http::{
-    compression::CompressionLayer,
-    cors::CorsLayer,
-    trace::TraceLayer,
-};
-use tracing::{info, warn, error};
+use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
+use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 // 🎯 Import all our amazing modules that we're about to create!
-mod api;           // 📡 API routes for feedback submission and management
-mod auth;          // 🔐 Authentication and authorization magic
-mod config;        // ⚙️  Configuration management (because settings matter!)
-mod database;      // 🗄️  Database operations and connections
-mod github;        // 🐙 GitHub integration for the legendary aye-is user
-mod jobs;          // 🔄 Background job processing for async operations
-mod llm;           // 🤖 LLM integration (OpenAI, Anthropic, and friends!)
-mod middleware;    // 🛡️  Custom middleware for rate limiting and security
-mod models;        // 📊 Data models and structures
-mod utils;         // 🔧 Utility functions and helpers
+mod api; // 📡 API routes for feedback submission and management
+mod auth; // 🔐 Authentication and authorization magic
+mod config; // ⚙️  Configuration management (because settings matter!)
+mod database; // 🗄️  Database operations and connections
+mod github; // 🐙 GitHub integration for the legendary aye-is user
+mod jobs; // 🔄 Background job processing for async operations
+mod llm; // 🤖 LLM integration (OpenAI, Anthropic, and friends!)
+mod middleware; // 🛡️  Custom middleware for rate limiting and security
+mod models; // 📊 Data models and structures
+mod utils; // 🔧 Utility functions and helpers
 
 use config::Config;
-use middleware::{rate_limiting::rate_limit_middleware, auth::auth_middleware};
+use middleware::{auth::auth_middleware, rate_limiting::rate_limit_middleware};
 
 // 🎊 The main function - Where the magic begins! 🎊
 #[tokio::main]
@@ -53,7 +52,10 @@ async fn main() -> Result<()> {
 
     info!("🚀 Configuration loaded successfully!");
     info!("🎯 Server will listen on: {}", config.server.address);
-    info!("🗄️ Database URL: {}", mask_database_url(&config.database.url));
+    info!(
+        "🗄️ Database URL: {}",
+        mask_database_url(&config.database.url)
+    );
 
     // 🔗 Initialize database connection pool
     let db_pool = database::create_pool(&config.database.url)
@@ -71,11 +73,13 @@ async fn main() -> Result<()> {
     let app_state = api::AppState::new(config.clone(), db_pool);
 
     // 🏗️ Build our beautiful Axum router
-    let app = create_router(app_state, &config)
-        .context("Failed to create router")?;
+    let app = create_router(app_state, &config).context("Failed to create router")?;
 
     // 🎧 Set up our server address
-    let addr: SocketAddr = config.server.address.parse()
+    let addr: SocketAddr = config
+        .server
+        .address
+        .parse()
         .context("Invalid server address in configuration")?;
 
     info!("🎉 Starting Feedbacker service on {}", addr);
@@ -142,14 +146,20 @@ fn create_router(app_state: api::AppState, config: &Config) -> Result<Router> {
         .route("/api/feedback", post(api::feedback::submit_feedback))
         // 📊 Status and health check endpoints
         .route("/api/health", get(api::health::health_check))
-        .route("/api/status/:project_id", get(api::status::get_project_status))
+        .route(
+            "/api/status/:project_id",
+            get(api::status::get_project_status),
+        )
         // 🔍 Project management endpoints
         .route("/api/projects", get(api::projects::list_projects))
         .route("/api/projects/:id", get(api::projects::get_project))
         // 🐙 GitHub webhook endpoint for status updates
         .route("/api/webhook/github", post(api::webhooks::github_webhook))
         // 🤖 Smart Tree integration endpoint
-        .route("/api/smart-tree/latest", get(api::smart_tree::get_latest_version))
+        .route(
+            "/api/smart-tree/latest",
+            get(api::smart_tree::get_latest_version),
+        )
         // 🔐 Authentication endpoints
         .route("/api/auth/login", post(api::auth::login))
         .route("/api/auth/logout", post(api::auth::logout))
@@ -201,7 +211,8 @@ fn create_router(app_state: api::AppState, config: &Config) -> Result<Router> {
 
 // 🏠 Home page handler - Our beautiful welcome page!
 async fn web_home() -> impl IntoResponse {
-    Html(r#"
+    Html(
+        r#"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -295,7 +306,8 @@ async fn web_home() -> impl IntoResponse {
     </div>
 </body>
 </html>
-    "#)
+    "#,
+    )
 }
 
 // 🛡️ Graceful shutdown signal handler

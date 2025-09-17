@@ -23,11 +23,11 @@ pub async fn create_pool(database_url: &str) -> Result<PgPool> {
 
     let pool = PgPoolOptions::new()
         .max_connections(20) // 🎯 Maximum connections in the pool
-        .min_connections(2)  // 🔄 Minimum connections to maintain
+        .min_connections(2) // 🔄 Minimum connections to maintain
         .acquire_timeout(Duration::from_secs(10)) // ⏱️ Timeout for getting a connection
         // TODO: Add connect timeout when available in SQLx version
-        .idle_timeout(Duration::from_secs(600))   // 💤 Close idle connections after 10 minutes
-        .max_lifetime(Duration::from_secs(1800))  // 🔄 Recreate connections every 30 minutes
+        .idle_timeout(Duration::from_secs(600)) // 💤 Close idle connections after 10 minutes
+        .max_lifetime(Duration::from_secs(1800)) // 🔄 Recreate connections every 30 minutes
         .connect(database_url)
         .await
         .context("Failed to create database connection pool")?;
@@ -44,7 +44,7 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
 
     // 🔍 Check if migrations table exists
     let migrations_exist = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'migrations')"
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'migrations')",
     )
     .fetch_one(pool)
     .await
@@ -56,7 +56,8 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
     }
 
     // 🎯 Run each migration in order
-    migrations::run_all_migrations(pool).await
+    migrations::run_all_migrations(pool)
+        .await
         .context("Failed to run database migrations")?;
 
     info!("✅ All database migrations completed successfully!");
@@ -107,7 +108,9 @@ impl PoolStats {
 pub async fn cleanup_old_records(pool: &PgPool) -> Result<()> {
     info!("🧹 Starting database cleanup...");
 
-    let mut transaction = pool.begin().await
+    let transaction = pool
+        .begin()
+        .await
         .context("Failed to start cleanup transaction")?;
 
     // TODO: Implement cleanup queries when database is ready
@@ -116,7 +119,9 @@ pub async fn cleanup_old_records(pool: &PgPool) -> Result<()> {
     let deleted_rate_limits = 0u64;
 
     // ✅ Commit the transaction
-    transaction.commit().await
+    transaction
+        .commit()
+        .await
         .context("Failed to commit cleanup transaction")?;
 
     info!(
@@ -146,10 +151,7 @@ pub trait DatabaseConnection {
 
     /// 🔍 Check if a record exists by ID
     async fn exists_by_id(&self, table: &str, id: &str) -> Result<bool> {
-        let query = format!(
-            "SELECT EXISTS(SELECT 1 FROM {} WHERE id = $1)",
-            table
-        );
+        let query = format!("SELECT EXISTS(SELECT 1 FROM {} WHERE id = $1)", table);
 
         let exists = sqlx::query_scalar::<_, bool>(&query)
             .bind(id)
@@ -201,10 +203,7 @@ mod tests {
     #[test]
     fn test_pool_stats() {
         // Create a mock pool stats for testing
-        let stats = PoolStats {
-            size: 10,
-            idle: 3,
-        };
+        let stats = PoolStats { size: 10, idle: 3 };
 
         assert_eq!(stats.active(), 7);
         assert!(stats.is_healthy());

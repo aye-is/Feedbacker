@@ -13,14 +13,14 @@ use uuid::Uuid;
 use crate::config::Config;
 
 // 📦 Re-export all our API modules
-pub mod auth;         // 🔐 Authentication endpoints
-pub mod feedback;     // 📝 Feedback submission and management
-pub mod health;       // 💚 Health check endpoints
-pub mod projects;     // 🏠 Project management endpoints
-pub mod smart_tree;   // 🌳 Smart Tree integration
-pub mod status;       // 📊 Status checking endpoints
-pub mod web;          // 🎨 Web UI endpoints
-pub mod webhooks;     // 🪝 GitHub webhook handlers
+pub mod auth; // 🔐 Authentication endpoints
+pub mod feedback; // 📝 Feedback submission and management
+pub mod health; // 💚 Health check endpoints
+pub mod projects; // 🏠 Project management endpoints
+pub mod smart_tree; // 🌳 Smart Tree integration
+pub mod status; // 📊 Status checking endpoints
+pub mod web; // 🎨 Web UI endpoints
+pub mod webhooks; // 🪝 GitHub webhook handlers
 
 /// 🎯 Application state shared across all handlers
 /// This contains everything our API endpoints need to function!
@@ -104,7 +104,11 @@ impl<T> ApiResponse<T> {
     }
 
     /// ❌ Create an error response
-    pub fn error(code: String, message: String, details: Option<serde_json::Value>) -> ApiResponse<()> {
+    pub fn error(
+        code: String,
+        message: String,
+        details: Option<serde_json::Value>,
+    ) -> ApiResponse<()> {
         ApiResponse {
             success: false,
             message: "Operation failed".to_string(),
@@ -198,9 +202,15 @@ impl<T> PaginatedResponse<T> {
 }
 
 /// 🔧 Default values for pagination
-fn default_page() -> u32 { 1 }
-fn default_limit() -> u32 { 20 }
-fn default_sort_order() -> SortOrder { SortOrder::Desc }
+fn default_page() -> u32 {
+    1
+}
+fn default_limit() -> u32 {
+    20
+}
+fn default_sort_order() -> SortOrder {
+    SortOrder::Desc
+}
 
 impl PaginationParams {
     /// ✅ Validate and normalize pagination parameters
@@ -290,11 +300,8 @@ pub mod utils {
 
     /// 🛡️ Create a forbidden error response
     pub fn forbidden_error() -> impl IntoResponse {
-        let api_response = ApiResponse::<()>::error(
-            "forbidden".to_string(),
-            "Access denied".to_string(),
-            None,
-        );
+        let api_response =
+            ApiResponse::<()>::error("forbidden".to_string(), "Access denied".to_string(), None);
 
         (StatusCode::FORBIDDEN, Json(api_response))
     }
@@ -359,8 +366,8 @@ mod tests {
         };
 
         let validated = params.validate();
-        assert_eq!(validated.page, 1);  // Should be corrected to 1
-        assert_eq!(validated.limit, 100);  // Should be capped at 100
+        assert_eq!(validated.page, 1); // Should be corrected to 1
+        assert_eq!(validated.limit, 100); // Should be capped at 100
         println!("✅ Pagination validation test passed!");
     }
 
@@ -373,7 +380,7 @@ mod tests {
             sort_order: SortOrder::Desc,
         };
 
-        assert_eq!(params.offset(), 40);  // (3-1) * 20 = 40
+        assert_eq!(params.offset(), 40); // (3-1) * 20 = 40
         println!("✅ Pagination offset calculation test passed!");
     }
 
@@ -384,7 +391,7 @@ mod tests {
         assert_eq!(meta.page, 2);
         assert_eq!(meta.limit, 10);
         assert_eq!(meta.total, 45);
-        assert_eq!(meta.total_pages, 5);  // ceil(45/10) = 5
+        assert_eq!(meta.total_pages, 5); // ceil(45/10) = 5
         assert!(meta.has_prev);
         assert!(meta.has_next);
         println!("✅ Pagination metadata test passed!");

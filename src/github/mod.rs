@@ -5,18 +5,21 @@
 // Trisha from Accounting loves when PRs are created automatically! 📊
 
 use anyhow::{Context, Result};
-use octocrab::{Octocrab, models::{Repository, pulls::PullRequest}};
+use octocrab::{
+    models::{pulls::PullRequest, Repository},
+    Octocrab,
+};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use crate::config::GitHubConfig;
 
-pub mod client;      // 🤖 GitHub API client wrapper
-pub mod operations;  // 🔧 High-level GitHub operations
-pub mod ssh;         // 🔐 SSH key management for git operations
-pub mod webhooks;    // 🪝 Webhook payload handling
+pub mod client; // 🤖 GitHub API client wrapper
+pub mod operations; // 🔧 High-level GitHub operations
+pub mod ssh; // 🔐 SSH key management for git operations
+pub mod webhooks; // 🪝 Webhook payload handling
 
 /// 🤖 GitHub client for API operations
 /// Handles authentication, rate limiting, and error handling
@@ -129,22 +132,30 @@ impl GitHubClient {
     pub async fn get_repository_info(&self, owner: &str, repo: &str) -> Result<RepositoryInfo> {
         info!("🔍 Fetching repository information for {}/{}", owner, repo);
 
-        let repository = self.octocrab
+        let repository = self
+            .octocrab
             .repos(owner, repo)
             .get()
             .await
             .context("Failed to fetch repository information")?;
 
         // 👥 Check if aye-is is a collaborator
-        let has_collaborator_access = self.check_collaborator_access(owner, repo).await
+        let has_collaborator_access = self
+            .check_collaborator_access(owner, repo)
+            .await
             .unwrap_or(false);
 
         let repo_info = RepositoryInfo {
-            owner: repository.owner.map(|o| o.login).flatten().unwrap_or_else(|| "unknown".to_string()),
+            owner: repository
+                .owner
+                .map(|o| o.login)  // 🔧 Fixed: map returns Option<String>, which is what we want
+                .unwrap_or_else(|| "unknown".to_string()),
             name: repository.name.clone(),
             full_name: repository.full_name.unwrap_or_default(),
             description: repository.description.clone(),
-            default_branch: repository.default_branch.unwrap_or_else(|| "main".to_string()),
+            default_branch: repository
+                .default_branch
+                .unwrap_or_else(|| "main".to_string()),
             is_private: repository.private.unwrap_or(false),
             has_collaborator_access,
         };
@@ -155,17 +166,22 @@ impl GitHubClient {
 
     /// 👥 Check if aye-is has collaborator access to the repository
     pub async fn check_collaborator_access(&self, owner: &str, repo: &str) -> Result<bool> {
-        debug!("👥 Checking collaborator access for aye-is on {}/{}", owner, repo);
+        debug!(
+            "👥 Checking collaborator access for aye-is on {}/{}",
+            owner, repo
+        );
 
         // TODO: Implement proper collaborator check when GitHub API is ready
-        match Ok::<(), anyhow::Error>(())
-        {
+        match Ok::<(), anyhow::Error>(()) {
             Ok(_) => {
                 debug!("✅ aye-is has collaborator access to {}/{}", owner, repo);
                 Ok(true)
             }
             Err(e) => {
-                warn!("❌ aye-is does not have collaborator access to {}/{}: {:#}", owner, repo, e);
+                warn!(
+                    "❌ aye-is does not have collaborator access to {}/{}: {:#}",
+                    owner, repo, e
+                );
                 Ok(false)
             }
         }
@@ -189,7 +205,10 @@ impl GitHubClient {
         &self,
         request: &FeedbackProcessingRequest,
     ) -> Result<PullRequestResult> {
-        info!("📝 Applying improvements for feedback: {}", request.feedback_id);
+        info!(
+            "📝 Applying improvements for feedback: {}",
+            request.feedback_id
+        );
         // TODO: Implement proper improvement application when GitHub API is ready
         Ok(PullRequestResult {
             url: "https://github.com/mock/repo/pull/1".to_string(),
@@ -211,7 +230,10 @@ impl GitHubClient {
 fn parse_repository(repository: &str) -> Result<(String, String)> {
     let parts: Vec<&str> = repository.split('/').collect();
     if parts.len() != 2 {
-        anyhow::bail!("Invalid repository format. Expected 'owner/repo', got '{}'", repository);
+        anyhow::bail!(
+            "Invalid repository format. Expected 'owner/repo', got '{}'",
+            repository
+        );
     }
     Ok((parts[0].to_string(), parts[1].to_string()))
 }
@@ -265,16 +287,17 @@ mod tests {
     #[test]
     fn test_generate_pr_description() {
         let feedback = "Please add error handling to the main function";
-        let improvements = vec![
-            (CodeImprovement {
+        let improvements = vec![(
+            CodeImprovement {
                 file_path: "src/main.rs".to_string(),
                 description: "Add error handling".to_string(),
                 change_type: ChangeType::Modify,
                 original_content: None,
                 new_content: "// Updated with error handling".to_string(),
                 line_number: Some(10),
-            }, "abc123".to_string()),
-        ];
+            },
+            "abc123".to_string(),
+        )];
 
         let description = generate_pr_description(feedback, &improvements);
         assert!(description.contains("AI-Generated Improvements"));

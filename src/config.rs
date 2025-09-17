@@ -273,8 +273,7 @@ impl Config {
 impl ServerConfig {
     fn load() -> Result<Self> {
         Ok(Self {
-            address: env::var("SERVER_ADDRESS")
-                .unwrap_or_else(|_| "127.0.0.1:3000".to_string()),
+            address: env::var("SERVER_ADDRESS").unwrap_or_else(|_| "127.0.0.1:3000".to_string()),
             timeout_seconds: env::var("SERVER_TIMEOUT_SECONDS")
                 .unwrap_or_else(|_| "30".to_string())
                 .parse()
@@ -356,8 +355,7 @@ impl OpenAiConfig {
     fn load_optional() -> Option<Self> {
         env::var("OPENAI_API_KEY").ok().map(|api_key| Self {
             api_key,
-            default_model: env::var("OPENAI_DEFAULT_MODEL")
-                .unwrap_or_else(|_| "gpt-4".to_string()),
+            default_model: env::var("OPENAI_DEFAULT_MODEL").unwrap_or_else(|_| "gpt-4".to_string()),
             temperature: env::var("OPENAI_TEMPERATURE")
                 .unwrap_or_else(|_| "0.7".to_string())
                 .parse()
@@ -452,10 +450,8 @@ impl EmailConfig {
 impl LoggingConfig {
     fn load() -> Result<Self> {
         Ok(Self {
-            level: env::var("LOG_LEVEL")
-                .unwrap_or_else(|_| "info".to_string()),
-            format: env::var("LOG_FORMAT")
-                .unwrap_or_else(|_| "pretty".to_string()),
+            level: env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string()),
+            format: env::var("LOG_FORMAT").unwrap_or_else(|_| "pretty".to_string()),
             file_path: env::var("LOG_FILE_PATH").ok(),
             log_requests: env::var("LOG_REQUESTS")
                 .unwrap_or_else(|_| "true".to_string())
@@ -530,16 +526,31 @@ mod tests {
 
     #[test]
     fn test_environment_parsing() {
-        assert_eq!("development".parse::<Environment>().unwrap(), Environment::Development);
-        assert_eq!("staging".parse::<Environment>().unwrap(), Environment::Staging);
-        assert_eq!("production".parse::<Environment>().unwrap(), Environment::Production);
+        assert_eq!(
+            "development".parse::<Environment>().unwrap(),
+            Environment::Development
+        );
+        assert_eq!(
+            "staging".parse::<Environment>().unwrap(),
+            Environment::Staging
+        );
+        assert_eq!(
+            "production".parse::<Environment>().unwrap(),
+            Environment::Production
+        );
         println!("✅ Environment parsing test passed!");
     }
 
     #[test]
     fn test_llm_provider_parsing() {
-        assert_eq!("openai".parse::<LlmProvider>().unwrap(), LlmProvider::OpenAi);
-        assert_eq!("anthropic".parse::<LlmProvider>().unwrap(), LlmProvider::Anthropic);
+        assert_eq!(
+            "openai".parse::<LlmProvider>().unwrap(),
+            LlmProvider::OpenAi
+        );
+        assert_eq!(
+            "anthropic".parse::<LlmProvider>().unwrap(),
+            LlmProvider::Anthropic
+        );
         println!("✅ LLM provider parsing test passed!");
     }
 
@@ -548,10 +559,16 @@ mod tests {
         // Set up minimal required environment variables for testing
         env::set_var("DATABASE_URL", "postgresql://test:test@localhost/test");
         env::set_var("GITHUB_TOKEN", "test_token");
-        env::set_var("JWT_SECRET", "this_is_a_very_long_secret_key_for_testing_purposes");
+        env::set_var(
+            "JWT_SECRET",
+            "this_is_a_very_long_secret_key_for_testing_purposes",
+        );
 
         let config = Config::load();
-        assert!(config.is_ok(), "Config loading should succeed with valid environment");
+        assert!(
+            config.is_ok(),
+            "Config loading should succeed with valid environment"
+        );
         println!("✅ Configuration validation test passed!");
     }
 }

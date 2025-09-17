@@ -11,7 +11,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::{
     api::{ApiResponse, AppState},
@@ -219,7 +219,10 @@ pub async fn detailed_health_check(State(app_state): State<AppState>) -> impl In
         HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
     };
 
-    info!("🏥 Detailed health check completed - Status: {:?}", response.status);
+    info!(
+        "🏥 Detailed health check completed - Status: {:?}",
+        response.status
+    );
 
     (
         status_code,
@@ -458,11 +461,15 @@ fn determine_overall_status(components: &ComponentHealth) -> HealthStatus {
     }
 
     // 🤖 LLM providers - if all are unhealthy, that's critical
-    let llm_all_unhealthy = components.llm_providers.openai
+    let llm_all_unhealthy = components
+        .llm_providers
+        .openai
         .as_ref()
         .map(|s| s.status == HealthStatus::Unhealthy)
-        .unwrap_or(true) &&
-        components.llm_providers.anthropic
+        .unwrap_or(true)
+        && components
+            .llm_providers
+            .anthropic
             .as_ref()
             .map(|s| s.status == HealthStatus::Unhealthy)
             .unwrap_or(true);

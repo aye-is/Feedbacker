@@ -2,8 +2,11 @@
 // This module provides web UI endpoints for the Feedbacker interface
 // Created with love by Aye & Hue! ✨
 
-use axum::{extract::State, response::{Html, IntoResponse}};
 use crate::api::AppState;
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse},
+};
 
 pub async fn projects_page(State(_app_state): State<AppState>) -> impl IntoResponse {
     Html("<h1>🏠 Projects Dashboard</h1><p>Coming soon...</p>")

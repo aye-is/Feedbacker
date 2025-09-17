@@ -10,10 +10,10 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Json, Response},
 };
-use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 use crate::{
@@ -118,7 +118,10 @@ pub async fn auth_middleware(
     let token = match extract_token_from_headers(&headers) {
         Some(token) => token,
         None => {
-            warn!("🚫 Missing authentication token for protected path: {}", path);
+            warn!(
+                "🚫 Missing authentication token for protected path: {}",
+                path
+            );
             return Err(unauthorized_response("Authentication token required"));
         }
     };
@@ -129,12 +132,18 @@ pub async fn auth_middleware(
             // 🔍 Optionally verify user still exists and is active
             match verify_user_active(&claims, &app_state).await {
                 Ok(user) => {
-                    debug!("✅ Authentication successful for user: {} ({})", user.email, user.id);
+                    debug!(
+                        "✅ Authentication successful for user: {} ({})",
+                        user.email, user.id
+                    );
 
                     // 🎯 Check permissions for this specific path
                     if let Some(required_permission) = get_required_permission(path) {
                         if !user.has_permission(required_permission) {
-                            warn!("🚫 Insufficient permissions for user {} on path: {}", user.email, path);
+                            warn!(
+                                "🚫 Insufficient permissions for user {} on path: {}",
+                                user.email, path
+                            );
                             return Err(forbidden_response("Insufficient permissions"));
                         }
                     }
@@ -160,18 +169,18 @@ pub async fn auth_middleware(
 /// 🔍 Check if a path is public (doesn't require authentication)
 fn is_public_path(path: &str) -> bool {
     let public_paths = [
-        "/",                        // Home page
-        "/api/health",              // Health checks
-        "/api/readiness",           // Readiness probe
-        "/api/liveness",            // Liveness probe
-        "/api/auth/login",          // Login endpoint
-        "/api/auth/register",       // Registration endpoint
-        "/api/webhook/github",      // GitHub webhooks (authenticated differently)
-        "/api/smart-tree/latest",   // Smart Tree version check
-        "/about",                   // About page
-        "/docs",                    // Documentation
-        "/login",                   // Login page
-        "/register",                // Registration page
+        "/",                      // Home page
+        "/api/health",            // Health checks
+        "/api/readiness",         // Readiness probe
+        "/api/liveness",          // Liveness probe
+        "/api/auth/login",        // Login endpoint
+        "/api/auth/register",     // Registration endpoint
+        "/api/webhook/github",    // GitHub webhooks (authenticated differently)
+        "/api/smart-tree/latest", // Smart Tree version check
+        "/about",                 // About page
+        "/docs",                  // Documentation
+        "/login",                 // Login page
+        "/register",              // Registration page
     ];
 
     // 🎯 Check exact matches
@@ -181,12 +190,14 @@ fn is_public_path(path: &str) -> bool {
 
     // 🎯 Check prefixes for public endpoints
     let public_prefixes = [
-        "/static/",     // Static assets
-        "/assets/",     // Assets
-        "/favicon",     // Favicon
+        "/static/", // Static assets
+        "/assets/", // Assets
+        "/favicon", // Favicon
     ];
 
-    public_prefixes.iter().any(|prefix| path.starts_with(prefix))
+    public_prefixes
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
 }
 
 /// 🔍 Extract JWT token from request headers
@@ -227,7 +238,10 @@ async fn validate_jwt_token(token: &str, secret: &str) -> anyhow::Result<Claims>
 }
 
 /// 🔍 Verify that the user still exists and is active
-async fn verify_user_active(claims: &Claims, app_state: &AppState) -> anyhow::Result<AuthenticatedUser> {
+async fn verify_user_active(
+    claims: &Claims,
+    app_state: &AppState,
+) -> anyhow::Result<AuthenticatedUser> {
     let user_id = Uuid::parse_str(&claims.sub)
         .map_err(|e| anyhow::anyhow!("Invalid user ID in token: {}", e))?;
 
@@ -281,22 +295,16 @@ fn get_required_permission(path: &str) -> Option<Permission> {
 
 /// 🚫 Create unauthorized error response
 fn unauthorized_response(message: &str) -> Response {
-    let error_response = ApiResponse::<()>::error(
-        "unauthorized".to_string(),
-        message.to_string(),
-        None,
-    );
+    let error_response =
+        ApiResponse::<()>::error("unauthorized".to_string(), message.to_string(), None);
 
     (StatusCode::UNAUTHORIZED, Json(error_response)).into_response()
 }
 
 /// 🛡️ Create forbidden error response
 fn forbidden_response(message: &str) -> Response {
-    let error_response = ApiResponse::<()>::error(
-        "forbidden".to_string(),
-        message.to_string(),
-        None,
-    );
+    let error_response =
+        ApiResponse::<()>::error("forbidden".to_string(), message.to_string(), None);
 
     (StatusCode::FORBIDDEN, Json(error_response)).into_response()
 }
@@ -444,12 +452,27 @@ mod tests {
 
     #[test]
     fn test_get_required_permission() {
-        assert_eq!(get_required_permission("/api/admin/settings"), Some(Permission::SystemAdmin));
-        assert_eq!(get_required_permission("/api/users/123"), Some(Permission::ManageUsers));
+        assert_eq!(
+            get_required_permission("/api/admin/settings"),
+            Some(Permission::SystemAdmin)
+        );
+        assert_eq!(
+            get_required_permission("/api/users/123"),
+            Some(Permission::ManageUsers)
+        );
         assert_eq!(get_required_permission("/api/users/me"), None);
-        assert_eq!(get_required_permission("/api/projects/create"), Some(Permission::ManageProjects));
-        assert_eq!(get_required_permission("/api/feedback/all"), Some(Permission::ViewAllFeedback));
-        assert_eq!(get_required_permission("/api/feedback/123"), Some(Permission::ReadFeedback));
+        assert_eq!(
+            get_required_permission("/api/projects/create"),
+            Some(Permission::ManageProjects)
+        );
+        assert_eq!(
+            get_required_permission("/api/feedback/all"),
+            Some(Permission::ViewAllFeedback)
+        );
+        assert_eq!(
+            get_required_permission("/api/feedback/123"),
+            Some(Permission::ReadFeedback)
+        );
 
         println!("✅ Required permission mapping test passed!");
     }

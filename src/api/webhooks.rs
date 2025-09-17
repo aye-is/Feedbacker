@@ -2,9 +2,13 @@
 // This module handles GitHub webhook endpoints
 // Created with love by Aye & Hue! ✨
 
-use axum::{extract::State, http::StatusCode, response::{IntoResponse, Json}};
-use serde::Deserialize;
 use crate::api::{ApiResponse, AppState};
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct GitHubWebhookPayload {
@@ -20,6 +24,8 @@ pub async fn github_webhook(
     // TODO: Implement GitHub webhook processing
     (
         StatusCode::OK,
-        Json(ApiResponse::success_no_data("Webhook processed".to_string())),
+        Json(ApiResponse::<()>::success_no_data(  // 🔧 Added explicit type annotation
+            "Webhook processed".to_string(),
+        )),
     )
 }

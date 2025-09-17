@@ -3,17 +3,20 @@
 // Built with JWT tokens and secure password hashing! 🛡️
 // Created with love by Aye & Hue - Making security beautiful and user-friendly! ✨
 
+use anyhow::{Context, Result};
 use axum::{
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Json},
+    response::{IntoResponse, Json, Response},
 };
 use serde::{Deserialize, Serialize};
-use anyhow::{Context, Result};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::{
-    api::{ApiResponse, AppState, ValidateRequest, utils::{handle_error, validation_error}},
+    api::{
+        utils::{handle_error, validation_error},
+        ApiResponse, AppState, ValidateRequest,
+    },
     database::models::{User, UserRole},
 };
 
@@ -64,7 +67,11 @@ impl ValidateRequest for LoginRequest {
             errors.push("Password is required".to_string());
         }
 
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
 }
 
@@ -84,7 +91,11 @@ impl ValidateRequest for RegisterRequest {
             errors.push("Password must be at least 8 characters".to_string());
         }
 
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
 }
 
@@ -92,11 +103,16 @@ impl ValidateRequest for RegisterRequest {
 pub async fn login(
     State(app_state): State<AppState>,
     Json(request): Json<LoginRequest>,
-) -> impl IntoResponse {
+) -> Response {
     info!("🔐 Login attempt for email: {}", request.email);
 
     if let Err(errors) = request.validate() {
-        return validation_error(errors);
+        let api_response = ApiResponse::<()>::error(
+            "validation_error".to_string(),
+            "Request validation failed".to_string(),
+            Some(serde_json::json!({ "errors": errors })),
+        );
+        return (StatusCode::BAD_REQUEST, Json(api_response)).into_response();
     }
 
     match authenticate_user(&app_state, request).await {
@@ -104,12 +120,21 @@ pub async fn login(
             info!("✅ Login successful for user: {}", response.user.email);
             (
                 StatusCode::OK,
-                Json(ApiResponse::success("Login successful".to_string(), response)),
-            )
+                Json(ApiResponse::<AuthResponse>::success(
+                    "Login successful".to_string(),
+                    response,
+                )),
+            ).into_response()
         }
         Err(e) => {
             warn!("❌ Login failed: {:#}", e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
@@ -118,47 +143,61 @@ pub async fn login(
 pub async fn register(
     State(app_state): State<AppState>,
     Json(request): Json<RegisterRequest>,
-) -> impl IntoResponse {
+) -> Response {
     info!("📝 Registration attempt for email: {}", request.email);
 
     if let Err(errors) = request.validate() {
-        return validation_error(errors);
+        let api_response = ApiResponse::<()>::error(
+            "validation_error".to_string(),
+            "Request validation failed".to_string(),
+            Some(serde_json::json!({ "errors": errors })),
+        );
+        return (StatusCode::BAD_REQUEST, Json(api_response)).into_response();
     }
 
     match create_user_account(&app_state, request).await {
         Ok(response) => {
-            info!("✅ Registration successful for user: {}", response.user.email);
+            info!(
+                "✅ Registration successful for user: {}",
+                response.user.email
+            );
             (
                 StatusCode::CREATED,
-                Json(ApiResponse::success("Registration successful".to_string(), response)),
-            )
+                Json(ApiResponse::<AuthResponse>::success(
+                    "Registration successful".to_string(),
+                    response,
+                )),
+            ).into_response()
         }
         Err(e) => {
             warn!("❌ Registration failed: {:#}", e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
 
 /// 🚪 User logout endpoint
-pub async fn logout(
-    State(_app_state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn logout(State(_app_state): State<AppState>) -> impl IntoResponse {
     info!("🚪 User logout requested");
 
     // TODO: Implement token invalidation when session management is ready
     (
         StatusCode::OK,
-        Json(ApiResponse::success_no_data("Logout successful".to_string())),
+        Json(ApiResponse::<()>::success_no_data(
+            "Logout successful".to_string(),
+        )),
     )
 }
 
 // Helper functions
 
-async fn authenticate_user(
-    app_state: &AppState,
-    request: LoginRequest,
-) -> Result<AuthResponse> {
+async fn authenticate_user(app_state: &AppState, request: LoginRequest) -> Result<AuthResponse> {
     // TODO: Implement actual authentication logic
     anyhow::bail!("Authentication not implemented yet")
 }

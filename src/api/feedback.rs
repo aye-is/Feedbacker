@@ -4,22 +4,23 @@
 // Created with love by Aye & Hue - Making feedback processing magical! ✨
 // Trisha from Accounting says this is the most organized feedback system ever! 📊
 
+use anyhow::{Context, Result};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{IntoResponse, Json},
+    response::{IntoResponse, Json, Response},
 };
 use serde::{Deserialize, Serialize};
+use sqlx::Row;  // 🔧 Added Row trait import for database row access
+use tracing::{error, info, warn};
 use uuid::Uuid;
-use anyhow::{Context, Result};
-use tracing::{info, warn, error};
 
 use crate::{
     api::{
+        utils::{handle_error, not_found_error, validation_error},
         ApiResponse, AppState, PaginatedResponse, PaginationParams, ValidateRequest,
-        utils::{handle_error, validation_error, not_found_error},
     },
-    database::models::{Feedback, FeedbackStatus, FeedbackStats},
+    database::models::{Feedback, FeedbackStats, FeedbackStatus},
 };
 
 /// 📝 Feedback submission request structure
@@ -154,13 +155,21 @@ impl ValidateRequest for SubmitFeedbackRequest {
 pub async fn submit_feedback(
     State(app_state): State<AppState>,
     Json(request): Json<SubmitFeedbackRequest>,
-) -> impl IntoResponse {
-    info!("📝 Received feedback submission for repository: {}", request.repository);
+) -> Response {
+    info!(
+        "📝 Received feedback submission for repository: {}",
+        request.repository
+    );
 
     // ✅ Validate the request
     if let Err(errors) = request.validate() {
         warn!("❌ Validation failed for feedback submission: {:?}", errors);
-        return validation_error(errors);
+        let api_response = ApiResponse::<()>::error(
+            "validation_error".to_string(),
+            "Request validation failed".to_string(),
+            Some(serde_json::json!({ "errors": errors })),
+        );
+        return (StatusCode::BAD_REQUEST, Json(api_response)).into_response();
     }
 
     // 🔍 Check if the repository is accessible and aye-is is a collaborator
@@ -171,7 +180,10 @@ pub async fn submit_feedback(
 
     match create_feedback_record(&app_state, request).await {
         Ok(response) => {
-            info!("✅ Feedback submitted successfully: {}", response.feedback_id);
+            info!(
+                "✅ Feedback submitted successfully: {}",
+                response.feedback_id
+            );
 
             // 🚀 Queue the feedback for processing
             // TODO: Add job queuing when background jobs module is ready
@@ -179,15 +191,21 @@ pub async fn submit_feedback(
 
             (
                 StatusCode::CREATED,
-                Json(ApiResponse::success(
+                Json(ApiResponse::<SubmitFeedbackResponse>::success(
                     "Feedback submitted successfully! Processing will begin shortly.".to_string(),
                     response,
                 )),
-            )
+            ).into_response()
         }
         Err(e) => {
             error!("❌ Failed to submit feedback: {:#}", e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
@@ -197,7 +215,7 @@ pub async fn submit_feedback(
 pub async fn get_feedback(
     State(app_state): State<AppState>,
     Path(feedback_id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Response {
     info!("🔍 Fetching feedback details for ID: {}", feedback_id);
 
     match fetch_feedback_details(&app_state, feedback_id).await {
@@ -205,19 +223,27 @@ pub async fn get_feedback(
             info!("✅ Found feedback: {}", feedback_id);
             (
                 StatusCode::OK,
-                Json(ApiResponse::success(
-                    "Feedback found".to_string(),
-                    feedback,
-                )),
-            )
+                Json(ApiResponse::success("Feedback found".to_string(), feedback)),
+            ).into_response()
         }
         Ok(None) => {
             warn!("🔍 Feedback not found: {}", feedback_id);
-            not_found_error("Feedback")
+            let api_response = ApiResponse::<()>::error(
+                "not_found".to_string(),
+                "Feedback not found".to_string(),
+                None,
+            );
+            (StatusCode::NOT_FOUND, Json(api_response)).into_response()
         }
         Err(e) => {
             error!("❌ Failed to fetch feedback {}: {:#}", feedback_id, e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
@@ -228,7 +254,7 @@ pub async fn list_feedback(
     State(app_state): State<AppState>,
     Query(pagination): Query<PaginationParams>,
     Query(query): Query<FeedbackQuery>,
-) -> impl IntoResponse {
+) -> Response {
     info!("📋 Listing feedback with filters: {:?}", query);
 
     let pagination = pagination.validate();
@@ -242,11 +268,17 @@ pub async fn list_feedback(
                     "Feedback list retrieved successfully".to_string(),
                     response,
                 )),
-            )
+            ).into_response()
         }
         Err(e) => {
             error!("❌ Failed to list feedback: {:#}", e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
@@ -256,7 +288,7 @@ pub async fn list_feedback(
 pub async fn get_feedback_stats(
     State(app_state): State<AppState>,
     Path(user_id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Response {
     info!("📊 Fetching feedback statistics for user: {}", user_id);
 
     match Feedback::get_user_stats(&app_state.db_pool, user_id).await {
@@ -268,11 +300,17 @@ pub async fn get_feedback_stats(
                     "Statistics retrieved successfully".to_string(),
                     stats,
                 )),
-            )
+            ).into_response()
         }
         Err(e) => {
             error!("❌ Failed to get feedback statistics: {:#}", e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
@@ -282,7 +320,7 @@ pub async fn get_feedback_stats(
 pub async fn retry_feedback(
     State(app_state): State<AppState>,
     Path(feedback_id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Response {
     info!("🔄 Retrying feedback processing for ID: {}", feedback_id);
 
     match retry_feedback_processing(&app_state, feedback_id).await {
@@ -290,14 +328,20 @@ pub async fn retry_feedback(
             info!("✅ Feedback retry queued successfully: {}", feedback_id);
             (
                 StatusCode::OK,
-                Json(ApiResponse::success_no_data(
+                Json(ApiResponse::<()>::success_no_data(
                     "Feedback processing retry queued successfully".to_string(),
                 )),
-            )
+            ).into_response()
         }
         Err(e) => {
             error!("❌ Failed to retry feedback {}: {:#}", feedback_id, e);
-            handle_error(e)
+            let error_msg = format!("{:#}", e);
+            let api_response = ApiResponse::<()>::error(
+                "internal_error".to_string(),
+                "An internal error occurred".to_string(),
+                Some(serde_json::json!({ "details": error_msg })),
+            );
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(api_response)).into_response()
         }
     }
 }
@@ -456,12 +500,17 @@ async fn retry_feedback_processing(app_state: &AppState, feedback_id: Uuid) -> R
         .await
         .context("Failed to fetch feedback for retry")?;
 
-    let mut feedback = feedback
-        .ok_or_else(|| anyhow::anyhow!("Feedback not found"))?;
+    let mut feedback = feedback.ok_or_else(|| anyhow::anyhow!("Feedback not found"))?;
 
     // 📋 Check if feedback is in a retryable state
-    if !matches!(feedback.status, FeedbackStatus::Failed | FeedbackStatus::Paused) {
-        anyhow::bail!("Feedback is not in a retryable state (current status: {:?})", feedback.status);
+    if !matches!(
+        feedback.status,
+        FeedbackStatus::Failed | FeedbackStatus::Paused
+    ) {
+        anyhow::bail!(
+            "Feedback is not in a retryable state (current status: {:?})",
+            feedback.status
+        );
     }
 
     // 🔄 Reset the feedback status to pending

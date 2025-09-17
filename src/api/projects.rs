@@ -2,10 +2,14 @@
 // This module handles project management endpoints
 // Created with love by Aye & Hue! ✨
 
-use axum::{extract::{Path, State}, http::StatusCode, response::{IntoResponse, Json}};
-use uuid::Uuid;
-use serde::Serialize;
 use crate::api::{ApiResponse, AppState};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
+use serde::Serialize;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
 pub struct ProjectInfo {
@@ -17,10 +21,13 @@ pub struct ProjectInfo {
 
 pub async fn list_projects(State(_app_state): State<AppState>) -> impl IntoResponse {
     // TODO: Implement project listing
-    let projects = vec![];
+    let projects: Vec<ProjectInfo> = vec![];  // 🔧 Added explicit type annotation
     (
         StatusCode::OK,
-        Json(ApiResponse::success("Projects retrieved".to_string(), projects)),
+        Json(ApiResponse::success(
+            "Projects retrieved".to_string(),
+            projects,
+        )),
     )
 }
 
@@ -38,6 +45,9 @@ pub async fn get_project(
 
     (
         StatusCode::OK,
-        Json(ApiResponse::success("Project retrieved".to_string(), project)),
+        Json(ApiResponse::success(
+            "Project retrieved".to_string(),
+            project,
+        )),
     )
 }

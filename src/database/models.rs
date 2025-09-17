@@ -4,11 +4,11 @@
 // Created with love by Aye & Hue - Making data beautiful and organized! 🎨
 // Trisha from Accounting says these are the most organized models she's ever seen! 📋
 
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
-use anyhow::{Context, Result};
 
 // 📝 Feedback Model - The heart of our system!
 // This represents user feedback that gets processed into GitHub PRs
@@ -391,7 +391,10 @@ mod tests {
         };
 
         assert_eq!(stats.total, 10);
-        assert_eq!(stats.pending + stats.processing + stats.completed + stats.failed, 10);
+        assert_eq!(
+            stats.pending + stats.processing + stats.completed + stats.failed,
+            10
+        );
         println!("✅ Feedback stats test passed!");
     }
 }

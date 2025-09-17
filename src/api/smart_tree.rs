@@ -2,9 +2,13 @@
 // This module provides Smart Tree MCP integration endpoints
 // Created with love by Aye & Hue! ✨
 
-use axum::{extract::State, http::StatusCode, response::{IntoResponse, Json}};
-use serde::Serialize;
 use crate::api::{ApiResponse, AppState};
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct VersionInfo {
@@ -22,6 +26,9 @@ pub async fn get_latest_version(State(_app_state): State<AppState>) -> impl Into
 
     (
         StatusCode::OK,
-        Json(ApiResponse::success("Version info retrieved".to_string(), version_info)),
+        Json(ApiResponse::success(
+            "Version info retrieved".to_string(),
+            version_info,
+        )),
     )
 }

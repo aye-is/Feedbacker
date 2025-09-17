@@ -2,10 +2,14 @@
 // This module provides endpoints for checking project and feedback status
 // Created with love by Aye & Hue! ✨
 
-use axum::{extract::{Path, State}, http::StatusCode, response::{IntoResponse, Json}};
-use uuid::Uuid;
-use serde::Serialize;
 use crate::api::{ApiResponse, AppState};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
+use serde::Serialize;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
 pub struct ProjectStatus {
@@ -29,6 +33,9 @@ pub async fn get_project_status(
 
     (
         StatusCode::OK,
-        Json(ApiResponse::success("Project status retrieved".to_string(), status)),
+        Json(ApiResponse::success(
+            "Project status retrieved".to_string(),
+            status,
+        )),
     )
 }

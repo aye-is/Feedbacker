@@ -23,7 +23,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use tracing::{debug, warn, info};
+use tracing::{debug, info, warn};
 
 use crate::{
     api::{ApiResponse, AppState},
@@ -94,10 +94,16 @@ impl RateLimitManager {
                 // 📝 For feedback, use both in-memory and database checking
                 if self.feedback_limiter.check().is_ok() {
                     // TODO: Add database rate limiting when database is ready
-                    debug!("✅ Feedback rate limit check passed for client: {}", client_id);
+                    debug!(
+                        "✅ Feedback rate limit check passed for client: {}",
+                        client_id
+                    );
                     RateLimitResult::Allowed
                 } else {
-                    warn!("🚫 In-memory feedback rate limit exceeded for client: {}", client_id);
+                    warn!(
+                        "🚫 In-memory feedback rate limit exceeded for client: {}",
+                        client_id
+                    );
                     RateLimitResult::Limited {
                         retry_after: Duration::from_secs(3600),
                         limit_type: "feedback".to_string(),
@@ -106,7 +112,10 @@ impl RateLimitManager {
             }
             RateLimitType::Webhook => {
                 // 🪝 Webhooks have a more lenient rate limit
-                debug!("✅ Webhook rate limit check passed for client: {}", client_id);
+                debug!(
+                    "✅ Webhook rate limit check passed for client: {}",
+                    client_id
+                );
                 RateLimitResult::Allowed
             }
         }
@@ -171,32 +180,50 @@ pub async fn rate_limit_middleware(
             debug!("✅ Rate limit check passed for {}: {}", client_ip, path);
             Ok(next.run(request).await)
         }
-        RateLimitResult::Limited { retry_after, limit_type } => {
-            warn!("🚫 Rate limit exceeded for {}: {} (type: {})", client_ip, path, limit_type);
+        RateLimitResult::Limited {
+            retry_after,
+            limit_type,
+        } => {
+            warn!(
+                "🚫 Rate limit exceeded for {}: {} (type: {})",
+                client_ip, path, limit_type
+            );
 
             let error_response = ApiResponse::<()>::error(
                 "rate_limit_exceeded".to_string(),
-                format!("Rate limit exceeded for {}. Try again in {} seconds.", limit_type, retry_after.as_secs()),
+                format!(
+                    "Rate limit exceeded for {}. Try again in {} seconds.",
+                    limit_type,
+                    retry_after.as_secs()
+                ),
                 Some(serde_json::json!({
                     "retry_after_seconds": retry_after.as_secs(),
                     "limit_type": limit_type
                 })),
             );
 
-            let mut response = (StatusCode::TOO_MANY_REQUESTS, Json(error_response)).into_response();
+            let mut response =
+                (StatusCode::TOO_MANY_REQUESTS, Json(error_response)).into_response();
 
             // 📋 Add rate limit headers
             response.headers_mut().insert(
                 "X-RateLimit-Limit",
-                format!("{}", app_state.config.rate_limiting.requests_per_minute).parse().unwrap(),
+                format!("{}", app_state.config.rate_limiting.requests_per_minute)
+                    .parse()
+                    .unwrap(),
             );
-            response.headers_mut().insert(
-                "X-RateLimit-Remaining",
-                "0".parse().unwrap(),
-            );
+            response
+                .headers_mut()
+                .insert("X-RateLimit-Remaining", "0".parse().unwrap());
             response.headers_mut().insert(
                 "X-RateLimit-Reset",
-                format!("{}", (chrono::Utc::now() + chrono::Duration::from_std(retry_after).unwrap()).timestamp()).parse().unwrap(),
+                format!(
+                    "{}",
+                    (chrono::Utc::now() + chrono::Duration::from_std(retry_after).unwrap())
+                        .timestamp()
+                )
+                .parse()
+                .unwrap(),
             );
             response.headers_mut().insert(
                 "Retry-After",
@@ -262,18 +289,36 @@ mod tests {
 
     #[test]
     fn test_determine_limit_type() {
-        assert!(matches!(determine_limit_type("/api/feedback"), RateLimitType::Feedback));
-        assert!(matches!(determine_limit_type("/api/feedback/123"), RateLimitType::Feedback));
-        assert!(matches!(determine_limit_type("/api/feedback/stats"), RateLimitType::Api));
-        assert!(matches!(determine_limit_type("/api/webhook/github"), RateLimitType::Webhook));
-        assert!(matches!(determine_limit_type("/api/health"), RateLimitType::Api));
+        assert!(matches!(
+            determine_limit_type("/api/feedback"),
+            RateLimitType::Feedback
+        ));
+        assert!(matches!(
+            determine_limit_type("/api/feedback/123"),
+            RateLimitType::Feedback
+        ));
+        assert!(matches!(
+            determine_limit_type("/api/feedback/stats"),
+            RateLimitType::Api
+        ));
+        assert!(matches!(
+            determine_limit_type("/api/webhook/github"),
+            RateLimitType::Webhook
+        ));
+        assert!(matches!(
+            determine_limit_type("/api/health"),
+            RateLimitType::Api
+        ));
         println!("✅ Rate limit type determination test passed!");
     }
 
     #[test]
     fn test_extract_client_ip() {
         let mut headers = HeaderMap::new();
-        headers.insert("X-Forwarded-For", "192.168.1.100, 10.0.0.1".parse().unwrap());
+        headers.insert(
+            "X-Forwarded-For",
+            "192.168.1.100, 10.0.0.1".parse().unwrap(),
+        );
 
         // Create a mock request (in real implementation, you'd need to create a proper request)
         // For this test, we'll focus on the header parsing logic
