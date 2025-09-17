@@ -155,6 +155,12 @@ fn create_router(app_state: api::AppState, config: &Config) -> Result<Router> {
         .route("/api/projects/:id", get(api::projects::get_project))
         // 🐙 GitHub webhook endpoint for status updates
         .route("/api/webhook/github", post(api::webhooks::github_webhook))
+        // 🎯 GitHub issue automation webhooks
+        .route("/api/webhook/issues", post(api::issue_hooks::github_issue_webhook))
+        // 🔧 Manual issue management endpoints
+        .route("/api/issues/:owner/:repo/:issue_number/comment", post(api::issue_hooks::add_issue_comment))
+        .route("/api/issues/:owner/:repo/:issue_number/labels", post(api::issue_hooks::add_issue_labels))
+        .route("/api/issues/:owner/:repo/:issue_number/close", post(api::issue_hooks::close_issue_with_comment))
         // 🤖 Smart Tree integration endpoint
         .route(
             "/api/smart-tree/latest",
