@@ -1,0 +1,119 @@
+[package]
+name = "feedbacker"
+version = "0.1.0"
+edition = "2021"
+authors = ["aye-is <aye@8b.is>"]
+license = "MIT OR Apache-2.0"
+description = "AI-driven repository management through user feedback - Making code better, one feedback at a time!"
+repository = "https://github.com/aye-is/feedbacker"
+keywords = ["feedback", "ai", "github", "automation", "rust"]
+categories = ["web-programming", "development-tools"]
+
+[dependencies]
+# Web framework - Axum is fast, type-safe, and works great with Tokio!
+axum = "0.7"
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tower = { version = "0.5", features = ["full"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "cors", "compression-full"] }
+
+# Async runtime - Tokio is the way!
+tokio = { version = "1.41", features = ["full"] }
+
+# HTTP client for external API calls
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# Serialization/Deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling - Because errors happen, and we handle them gracefully!
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Logging - Know what's happening in your service
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Database - SQLx for async database operations
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+
+# UUID generation for unique IDs
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Date/Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Configuration management
+config = "0.14"
+dotenv = "0.15"
+
+# Authentication & Security
+jsonwebtoken = "9"
+argon2 = "0.5"
+rand = "0.8"
+
+# Rate limiting
+governor = "0.7"
+nonzero_ext = "0.3"
+
+# GitHub API integration
+octocrab = "0.42"
+git2 = "0.19"
+
+# SSH operations for git
+ssh2 = "0.9"
+
+# Template engine for web UI
+askama = "0.12"
+askama_axum = "0.4"
+
+# OpenAI and other LLM integrations
+async-openai = "0.25"
+
+# Webhook support
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Background job processing
+tokio-cron-scheduler = "0.13"
+
+# Redis for caching (optional but recommended)
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"], optional = true }
+
+# Additional dependencies for our awesome service
+lazy_static = "1.5"
+base64 = "0.22"
+
+[dev-dependencies]
+# Testing utilities
+mockito = "1.6"
+wiremock = "0.6"
+tokio-test = "0.4"
+pretty_assertions = "1.4"
+test-log = "0.2"
+criterion = "0.5"
+
+[features]
+default = ["redis-cache"]
+redis-cache = ["redis"]
+dev-mode = []  # Enable development features like auto-reload
+
+[profile.release]
+# Optimize for size and performance
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+# Faster compilation for development
+opt-level = 0
+
+[[bin]]
+name = "feedbacker"
+path = "src/main.rs"
+
+[[example]]
+name = "feedback_client"
+path = "examples/feedback_client.rs"

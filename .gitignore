@@ -1,1 +1,80 @@
-target/
+# 🚢 Gitignore for Feedbacker Service
+
+# Rust build artifacts
+/target
+**/*.rs.bk
+*.pdb
+
+# Environment files (KEEP THESE SECRET!)
+.env
+.env.local
+.env.production
+
+# SSH Keys (NEVER commit these!)
+keys/
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+*.rsa
+*.rsa.pub
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test coverage
+*.profraw
+*.profdata
+coverage/
+
+# Logs
+*.log
+logs/
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Python virtualenv (if we add Python tools)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Node modules (if we add frontend)
+node_modules/
+dist/
+.parcel-cache/
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Redis dump
+dump.rdb
+
+# Docker volumes
+docker-data/
+
+# Generated documentation
+/docs/generated/
+
+# OS specific
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Keep the example env file
+!.env.example
