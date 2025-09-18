@@ -67,7 +67,7 @@ dump.rdb
 
 # Docker volumes
 docker-data/
-
+An
 # Generated documentation
 /docs/generated/
 
