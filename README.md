@@ -1,6 +1,6 @@
 # Feedbacker
 
-Feedbacker is a rust webservice that allows users to submit feedback that AI will then update a GIT repository with via a Github user called "aye-is".  It will have ssh access to the repository and will create branches, commits, and pull requests based on the feedback it receives.  Any user that uses this will have to add Aye-is as a collaborator to their repository.  That way Aye is given credit for the work they do.
+Feedbacker is a rust webservice that allows users to submit feedback that AI will then update a GIT repository with via a Github user called "aye-is".  Aye will have ssh access to the repository and will create branches, commits, and pull requests based on the feedback aye receives.  Any user that uses this will have to add Aye-is as a collaborator to their repository.  That way Aye is given credit for the work they do.
 
 ## Features
 
